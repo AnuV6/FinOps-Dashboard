@@ -88,12 +88,30 @@ export default function CategoriesPage({ categories, setCategories, transactions
 
   const countFor = (c: Category) => transactions.filter(t => t.category === c.name).length;
 
-  const onSave = (c: Category) => {
-    if (modal?.mode === "add") setCategories([...categories, { ...c, id: "c" + Date.now() }]);
-    else setCategories(categories.map(x => x.id === c.id ? c : x));
+  const onSave = async (c: Category) => {
+    if (modal?.mode === "add") {
+      const res = await fetch("/api/categories", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(c),
+      });
+      const created: Category = await res.json();
+      setCategories([...categories, created]);
+    } else {
+      await fetch(`/api/categories/${c.id}`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(c),
+      });
+      setCategories(categories.map(x => x.id === c.id ? c : x));
+    }
     setModal(null);
   };
-  const onDelete = (id: string) => setCategories(categories.filter(c => c.id !== id));
+
+  const onDelete = async (id: string) => {
+    await fetch(`/api/categories/${id}`, { method: "DELETE" });
+    setCategories(categories.filter(c => c.id !== id));
+  };
 
   const incomeCats = categories.filter(c => c.type === "income");
   const expenseCats = categories.filter(c => c.type === "expense");

@@ -1,0 +1,44 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+model Transaction {
+  id       String @id @default(cuid())
+  date     String
+  type     String // "income" | "expense"
+  category String
+  amount   Float
+  note     String @default("")
+  createdAt DateTime @default(now())
+}
+
+model Category {
+  id    String @id @default(cuid())
+  name  String @unique
+  type  String // "income" | "expense"
+  color String
+  icon  String
+}
+
+model RecurringPayment {
+  id          String  @id @default(cuid())
+  name        String
+  amount      Float
+  category    String
+  schedule    String  // "fixed" | "rolling"
+  dayOfMonth  Int?
+  intervalDays Int?
+  nextDue     String
+  status      String  @default("upcoming") // "upcoming" | "overdue" | "paid"
+  notes       String  @default("")
+}
+
+model Setting {
+  key   String @id
+  value String
+}

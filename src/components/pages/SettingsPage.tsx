@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useRef } from "react";
 import Icon from "../Icon";
 import { Switch, Checkbox } from "../FormControls";
 import type { Settings } from "@/lib/data";
@@ -13,13 +13,55 @@ interface Props {
 export default function SettingsPage({ settings, setSettings }: Props) {
   const [showPw, setShowPw] = useState(false);
   const [copied, setCopied] = useState(false);
+  const [pwErr, setPwErr] = useState("");
+  const [pwOk, setPwOk] = useState(false);
+  const curPwRef = useRef<HTMLInputElement>(null);
+  const newPwRef = useRef<HTMLInputElement>(null);
+  const cfmPwRef = useRef<HTMLInputElement>(null);
 
   const copyChatId = () => {
     navigator.clipboard?.writeText(settings.telegramChatId);
     setCopied(true);
     setTimeout(() => setCopied(false), 1500);
   };
-  const set = (k: keyof Settings, v: boolean | string) => setSettings({ ...settings, [k]: v });
+
+  const set = async (k: keyof Settings, v: boolean | string) => {
+    const next = { ...settings, [k]: v };
+    setSettings(next);
+    await fetch("/api/settings", {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(next),
+    });
+  };
+
+  const updatePassword = async () => {
+    setPwErr(""); setPwOk(false);
+    const cur = curPwRef.current?.value ?? "";
+    const nw = newPwRef.current?.value ?? "";
+    const cfm = cfmPwRef.current?.value ?? "";
+    if (!cur || !nw || !cfm) { setPwErr("All fields are required."); return; }
+    if (nw !== cfm) { setPwErr("New passwords don't match."); return; }
+    if (nw.length < 4) { setPwErr("Password must be at least 4 characters."); return; }
+
+    const authRes = await fetch("/api/auth", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ password: cur }),
+    });
+    if (!authRes.ok) { setPwErr("Current password is incorrect."); return; }
+
+    await fetch("/api/settings", {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ ...settings, password: nw }),
+    });
+    if (curPwRef.current) curPwRef.current.value = "";
+    if (newPwRef.current) newPwRef.current.value = "";
+    if (cfmPwRef.current) cfmPwRef.current.value = "";
+    setPwOk(true);
+    setTimeout(() => setPwOk(false), 3000);
+  };
 
   return (
     <div>
@@ -118,18 +160,20 @@ export default function SettingsPage({ settings, setSettings }: Props) {
           <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr auto", gap: 12, alignItems: "end" }}>
             <div className="field">
               <label>Current password</label>
-              <input className="input" type={showPw ? "text" : "password"} placeholder="--------" />
+              <input ref={curPwRef} className="input" type={showPw ? "text" : "password"} placeholder="--------" />
             </div>
             <div className="field">
               <label>New password</label>
-              <input className="input" type={showPw ? "text" : "password"} placeholder="At least 8 characters" />
+              <input ref={newPwRef} className="input" type={showPw ? "text" : "password"} placeholder="At least 4 characters" />
             </div>
             <div className="field">
               <label>Confirm new password</label>
-              <input className="input" type={showPw ? "text" : "password"} placeholder="Repeat new password" />
+              <input ref={cfmPwRef} className="input" type={showPw ? "text" : "password"} placeholder="Repeat new password" />
             </div>
-            <button className="btn btn-primary">Update password</button>
+            <button className="btn btn-primary" onClick={updatePassword}>Update password</button>
           </div>
+          {pwErr && <div style={{ color: "var(--red-2)", fontSize: 12, marginTop: 8 }}>{pwErr}</div>}
+          {pwOk && <div style={{ color: "var(--emerald-2)", fontSize: 12, marginTop: 8 }}>Password updated successfully.</div>}
           <div style={{ marginTop: 12 }}>
             <Checkbox value={showPw} onChange={setShowPw} label="Show passwords while typing" />
           </div>

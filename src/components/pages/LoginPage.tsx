@@ -7,14 +7,31 @@ export default function LoginPage({ onLogin }: { onLogin: () => void }) {
   const [pwd, setPwd] = useState("");
   const [show, setShow] = useState(false);
   const [err, setErr] = useState("");
+  const [busy, setBusy] = useState(false);
 
-  const submit = (e?: FormEvent) => {
+  const submit = async (e?: FormEvent) => {
     e?.preventDefault();
-    if (pwd.length < 4) {
+    if (!pwd) {
       setErr("Enter your password to continue.");
       return;
     }
-    onLogin();
+    setBusy(true);
+    try {
+      const res = await fetch("/api/auth", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ password: pwd }),
+      });
+      if (res.ok) {
+        onLogin();
+      } else {
+        setErr("Incorrect password.");
+      }
+    } catch {
+      setErr("Could not reach server.");
+    } finally {
+      setBusy(false);
+    }
   };
 
   return (
@@ -46,10 +63,10 @@ export default function LoginPage({ onLogin }: { onLogin: () => void }) {
           </div>
           {err && <div style={{ color: "var(--red-2)", fontSize: 12 }}>{err}</div>}
         </div>
-        <button type="submit" className="btn btn-primary" style={{ marginTop: 6 }}>
-          <Icon name="Lock" size={14} /> Sign in
+        <button type="submit" className="btn btn-primary" style={{ marginTop: 6 }} disabled={busy}>
+          <Icon name="Lock" size={14} /> {busy ? "Signing in…" : "Sign in"}
         </button>
-        <div className="login-foot">Single-user &middot; Last sync 2 minutes ago</div>
+        <div className="login-foot">Single-user &middot; Personal finance dashboard</div>
       </form>
     </div>
   );

@@ -108,15 +108,20 @@ export default function RecurringPage({ recurring, setRecurring, categories, tra
   const today = todayISO();
   const sorted = [...recurring].map(r => ({ ...r, days: daysBetween(today, r.nextDue) })).sort((a, b) => a.days - b.days);
 
-  const markPaid = (r: RecurringPayment & { days: number }) => {
-    const newTx: Transaction = {
-      id: "t" + Date.now(),
+  const markPaid = async (r: RecurringPayment & { days: number }) => {
+    const txBody = {
       date: isoDate(today),
       type: "expense",
       category: r.category,
       amount: r.amount,
       note: r.name + " (auto)",
     };
+    const txRes = await fetch("/api/transactions", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(txBody),
+    });
+    const newTx: Transaction = await txRes.json();
     setTransactions([newTx, ...transactions]);
 
     let next: Date;
@@ -128,13 +133,37 @@ export default function RecurringPage({ recurring, setRecurring, categories, tra
       next = new Date(cur);
       next.setDate(next.getDate() + (r.intervalDays || 30));
     }
-    setRecurring(recurring.map(x => x.id === r.id ? { ...x, nextDue: isoDate(next), status: "upcoming" as const } : x));
+    const updated = { ...r, nextDue: isoDate(next), status: "upcoming" as const };
+    await fetch(`/api/recurring/${r.id}`, {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(updated),
+    });
+    setRecurring(recurring.map(x => x.id === r.id ? updated : x));
   };
 
-  const onDelete = (id: string) => setRecurring(recurring.filter(r => r.id !== id));
-  const onSave = (r: RecurringPayment) => {
-    if (modal?.mode === "add") setRecurring([{ ...r, id: "r" + Date.now() }, ...recurring]);
-    else setRecurring(recurring.map(x => x.id === r.id ? r : x));
+  const onDelete = async (id: string) => {
+    await fetch(`/api/recurring/${id}`, { method: "DELETE" });
+    setRecurring(recurring.filter(r => r.id !== id));
+  };
+
+  const onSave = async (r: RecurringPayment) => {
+    if (modal?.mode === "add") {
+      const res = await fetch("/api/recurring", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(r),
+      });
+      const created: RecurringPayment = await res.json();
+      setRecurring([created, ...recurring]);
+    } else {
+      await fetch(`/api/recurring/${r.id}`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(r),
+      });
+      setRecurring(recurring.map(x => x.id === r.id ? r : x));
+    }
     setModal(null);
   };
 

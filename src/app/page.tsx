@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import Sidebar from "@/components/Sidebar";
 import LoginPage from "@/components/pages/LoginPage";
 import DashboardPage from "@/components/pages/DashboardPage";
@@ -10,10 +10,6 @@ import ReportsPage from "@/components/pages/ReportsPage";
 import CategoriesPage from "@/components/pages/CategoriesPage";
 import SettingsPage from "@/components/pages/SettingsPage";
 import {
-  SEED_TRANSACTIONS,
-  SEED_RECURRING,
-  SEED_CATEGORIES,
-  DEFAULT_SETTINGS,
   type Route,
   type Transaction,
   type RecurringPayment,
@@ -25,13 +21,44 @@ export default function App() {
   const [loggedIn, setLoggedIn] = useState(false);
   const [route, setRoute] = useState<Route>("dashboard");
 
-  const [transactions, setTransactions] = useState<Transaction[]>(SEED_TRANSACTIONS);
-  const [recurring, setRecurring] = useState<RecurringPayment[]>(SEED_RECURRING);
-  const [categories, setCategories] = useState<Category[]>(SEED_CATEGORIES);
-  const [settings, setSettings] = useState<Settings>(DEFAULT_SETTINGS);
+  const [transactions, setTransactions] = useState<Transaction[]>([]);
+  const [recurring, setRecurring] = useState<RecurringPayment[]>([]);
+  const [categories, setCategories] = useState<Category[]>([]);
+  const [settings, setSettings] = useState<Settings>({
+    telegramChatId: "",
+    remindersOn: true,
+    remind1d: true,
+    remind2d: true,
+    dailySummary: false,
+  });
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    if (!loggedIn) return;
+    Promise.all([
+      fetch("/api/transactions").then(r => r.json()),
+      fetch("/api/recurring").then(r => r.json()),
+      fetch("/api/categories").then(r => r.json()),
+      fetch("/api/settings").then(r => r.json()),
+    ]).then(([txs, recs, cats, setts]) => {
+      setTransactions(txs);
+      setRecurring(recs);
+      setCategories(cats);
+      setSettings(setts);
+      setLoading(false);
+    });
+  }, [loggedIn]);
 
   if (!loggedIn) {
     return <LoginPage onLogin={() => setLoggedIn(true)} />;
+  }
+
+  if (loading) {
+    return (
+      <div style={{ display: "flex", alignItems: "center", justifyContent: "center", height: "100vh", color: "var(--text-dim)", fontSize: 14 }}>
+        Loading…
+      </div>
+    );
   }
 
   return (
@@ -39,14 +66,18 @@ export default function App() {
       <Sidebar
         route={route}
         setRoute={setRoute}
-        onLogout={() => setLoggedIn(false)}
+        onLogout={() => { setLoggedIn(false); setLoading(true); }}
       />
       <main className="main">
         {route === "dashboard" && (
           <DashboardPage transactions={transactions} recurring={recurring} categories={categories} setRoute={setRoute} />
         )}
         {route === "transactions" && (
-          <TransactionsPage transactions={transactions} setTransactions={setTransactions} categories={categories} />
+          <TransactionsPage
+            transactions={transactions}
+            setTransactions={setTransactions}
+            categories={categories}
+          />
         )}
         {route === "recurring" && (
           <RecurringPage

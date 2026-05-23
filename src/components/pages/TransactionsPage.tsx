@@ -104,15 +104,30 @@ export default function TransactionsPage({ transactions, setTransactions, catego
   const totalIncome = filtered.filter(t => t.type === "income").reduce((s, t) => s + t.amount, 0);
   const totalExpense = filtered.filter(t => t.type === "expense").reduce((s, t) => s + t.amount, 0);
 
-  const onSave = (tx: Transaction) => {
+  const onSave = async (tx: Transaction) => {
     if (modal?.mode === "add") {
-      setTransactions([{ ...tx, id: "t" + Date.now() }, ...transactions]);
+      const res = await fetch("/api/transactions", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(tx),
+      });
+      const created: Transaction = await res.json();
+      setTransactions([created, ...transactions]);
     } else {
+      await fetch(`/api/transactions/${tx.id}`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(tx),
+      });
       setTransactions(transactions.map(t => t.id === tx.id ? tx : t));
     }
     setModal(null);
   };
-  const onDelete = (id: string) => setTransactions(transactions.filter(t => t.id !== id));
+
+  const onDelete = async (id: string) => {
+    await fetch(`/api/transactions/${id}`, { method: "DELETE" });
+    setTransactions(transactions.filter(t => t.id !== id));
+  };
 
   return (
     <div>
