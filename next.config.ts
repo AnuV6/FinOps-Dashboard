@@ -1,8 +1,9 @@
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
+  output: "standalone",
   turbopack: {
-    root: "C:\\Users\\AnupaDinurangaBISTEC\\OneDrive - BISTEC Global\\Desktop\\Personal Projects\\FinOps Dashboard",
+    root: process.cwd(),
   },
 };
 
