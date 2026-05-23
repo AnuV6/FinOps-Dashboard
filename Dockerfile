@@ -4,10 +4,12 @@ FROM node:22-alpine AS base
 FROM base AS deps
 WORKDIR /app
 COPY package.json package-lock.json ./
-# NOTE: do NOT use --ignore-scripts here — Prisma needs its postinstall hooks
-# to set up engine binaries. We skip only our own postinstall (prisma generate)
-# by omitting schema at this stage; Prisma's own install hooks are fine.
-RUN npm ci
+# --ignore-scripts: skips our own postinstall (prisma generate) which would fail
+# here because prisma/schema.prisma hasn't been copied yet. The builder stage
+# runs `npx prisma generate` explicitly after copying the full source.
+# The WASM issue is avoided in entrypoint.sh by calling prisma/build/index.js
+# directly instead of through the .bin/ symlink.
+RUN npm ci --ignore-scripts
 
 # ── builder: generate Prisma client + Next.js build ───────────────────────────
 FROM base AS builder
