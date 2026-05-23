@@ -191,6 +191,46 @@ export default function SettingsPage({ settings, setSettings }: Props) {
           </div>
         </div>
 
+        {/* Danger zone */}
+        <div className="card" style={{ gridColumn: "1 / -1", borderColor: "var(--red-1, #ef4444)" }}>
+          <div className="card-head">
+            <div>
+              <div className="card-title" style={{ display: "flex", alignItems: "center", gap: 8, color: "var(--red-2, #f87171)" }}>
+                <Icon name="Alert" size={15} />
+                Danger zone
+              </div>
+              <div className="card-sub">Irreversible actions</div>
+            </div>
+          </div>
+          <div className="settings-row" style={{ alignItems: "center" }}>
+            <div className="lbl-stack">
+              <div className="lbl">Clear all data</div>
+              <div className="desc">Delete all transactions and recurring payments. Categories and settings are kept.</div>
+            </div>
+            {clearStatus === "idle" && (
+              <button className="btn btn-sm" style={{ background: "var(--red-1, #ef4444)", color: "#fff" }} onClick={() => setClearStatus("confirm")}>
+                Clear all data
+              </button>
+            )}
+            {clearStatus === "confirm" && (
+              <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
+                <span style={{ fontSize: 12, color: "var(--red-2, #f87171)" }}>Are you sure?</span>
+                <button className="btn btn-sm" style={{ background: "var(--red-1, #ef4444)", color: "#fff" }} onClick={async () => {
+                  setClearStatus("clearing");
+                  await fetch("/api/clear", { method: "POST" });
+                  setClearStatus("done");
+                  setTimeout(() => window.location.reload(), 1000);
+                }}>
+                  Yes, delete everything
+                </button>
+                <button className="btn btn-sm btn-ghost" onClick={() => setClearStatus("idle")}>Cancel</button>
+              </div>
+            )}
+            {clearStatus === "clearing" && <span style={{ fontSize: 12, color: "var(--text-dim)" }}>Clearing...</span>}
+            {clearStatus === "done" && <span style={{ fontSize: 12, color: "var(--emerald-2)" }}>Cleared! Reloading...</span>}
+          </div>
+        </div>
+
         {/* Change password */}
         <div className="card" style={{ gridColumn: "1 / -1" }}>
           <div className="card-head">
