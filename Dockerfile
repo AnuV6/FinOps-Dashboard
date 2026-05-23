@@ -1,36 +1,30 @@
 FROM node:22-alpine AS base
 
-# ── deps: install all node_modules ────────────────────────────────────────────
+# ── deps: install all node_modules + Prisma engines ──────────────────────────
 FROM base AS deps
 WORKDIR /app
+RUN apk add --no-cache openssl
 COPY package.json package-lock.json ./
-# --ignore-scripts: skips our own postinstall (prisma generate) which would fail
-# here because prisma/schema.prisma hasn't been copied yet. The builder stage
-# runs `npx prisma generate` explicitly after copying the full source.
-# The WASM issue is avoided in entrypoint.sh by calling prisma/build/index.js
-# directly instead of through the .bin/ symlink.
-RUN npm ci --ignore-scripts
+# Prisma's postinstall (and our own) needs the schema file to download the
+# correct engine binaries, so copy it before npm ci.
+COPY prisma/schema.prisma prisma/schema.prisma
+RUN npm ci
 
-# ── builder: generate Prisma client + Next.js build ───────────────────────────
+# ── builder: Next.js production build ────────────────────────────────────────
 FROM base AS builder
 WORKDIR /app
-# OpenSSL is required by Prisma's schema engine (migrate deploy)
 RUN apk add --no-cache openssl
 COPY --from=deps /app/node_modules ./node_modules
 COPY . .
 ENV NEXT_TELEMETRY_DISABLED=1
-# generate Prisma client (no DB needed at build time)
-RUN npx prisma generate
 RUN npm run build
 
-# ── runner: minimal production image ──────────────────────────────────────────
+# ── runner: minimal production image ─────────────────────────────────────────
 FROM base AS runner
 WORKDIR /app
 ENV NODE_ENV=production
 ENV NEXT_TELEMETRY_DISABLED=1
-# OpenSSL required by Prisma schema engine at runtime (migrate deploy in entrypoint)
 RUN apk add --no-cache openssl
-# DB will be volume-mounted at /data; override DATABASE_URL at runtime via env
 ENV DATABASE_URL="file:/data/finops.db"
 
 RUN addgroup --system --gid 1001 nodejs
@@ -47,8 +41,7 @@ COPY --from=builder --chown=nextjs:nodejs /app/.next/static ./.next/static
 # Prisma schema + migrations + seed (needed at startup)
 COPY --from=builder --chown=nextjs:nodejs /app/prisma ./prisma
 
-# Full prisma package (node_modules/prisma/build/index.js is called directly
-# in entrypoint.sh so __dirname resolves correctly and finds the WASM engine)
+# Prisma engines (schema engine for migrate deploy, query engine for runtime)
 COPY --from=builder --chown=nextjs:nodejs /app/node_modules/prisma ./node_modules/prisma
 COPY --from=builder --chown=nextjs:nodejs /app/node_modules/@prisma ./node_modules/@prisma
 
