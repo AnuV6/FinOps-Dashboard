@@ -6,8 +6,21 @@ services:
       - "3000:3000"
     environment:
       DATABASE_URL: "file:/data/finops.db"
+      TELEGRAM_BOT_TOKEN: "${TELEGRAM_BOT_TOKEN}"
     volumes:
       - finops-data:/data
+
+  # Lightweight Alpine cron that fires the remind endpoint daily at 9 AM
+  cron:
+    image: alpine:3
+    restart: unless-stopped
+    depends_on:
+      - finops
+    environment:
+      TZ: "${TZ:-Asia/Colombo}"
+    volumes:
+      - ./cron/crontab:/etc/crontabs/root:ro
+    command: crond -f -l 2
 
 volumes:
   finops-data:

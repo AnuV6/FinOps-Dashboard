@@ -15,6 +15,8 @@ export default function SettingsPage({ settings, setSettings }: Props) {
   const [copied, setCopied] = useState(false);
   const [pwErr, setPwErr] = useState("");
   const [pwOk, setPwOk] = useState(false);
+  const [testStatus, setTestStatus] = useState<"idle" | "sending" | "ok" | "fail">("idle");
+  const [chatIdEdit, setChatIdEdit] = useState(settings.telegramChatId);
   const curPwRef = useRef<HTMLInputElement>(null);
   const newPwRef = useRef<HTMLInputElement>(null);
   const cfmPwRef = useRef<HTMLInputElement>(null);
@@ -33,6 +35,21 @@ export default function SettingsPage({ settings, setSettings }: Props) {
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(next),
     });
+  };
+
+  const saveChatId = async () => {
+    await set("telegramChatId", chatIdEdit);
+  };
+
+  const testReminder = async () => {
+    setTestStatus("sending");
+    try {
+      const res = await fetch("/api/remind", { method: "POST" });
+      setTestStatus(res.ok ? "ok" : "fail");
+    } catch {
+      setTestStatus("fail");
+    }
+    setTimeout(() => setTestStatus("idle"), 4000);
   };
 
   const updatePassword = async () => {
@@ -73,6 +90,7 @@ export default function SettingsPage({ settings, setSettings }: Props) {
       </div>
 
       <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16 }}>
+        {/* Telegram */}
         <div className="card">
           <div className="card-head">
             <div>
@@ -80,35 +98,60 @@ export default function SettingsPage({ settings, setSettings }: Props) {
                 <span style={{ color: "#38bdf8" }}><Icon name="Telegram" size={16} /></span>
                 Telegram integration
               </div>
-              <div className="card-sub">Get reminders &amp; log transactions from chat</div>
+              <div className="card-sub">Reminders sent to your Telegram chat</div>
             </div>
-            <span className="badge success"><span className="dot" /> Connected</span>
+            <span className="badge success"><span className="dot" /> Active</span>
           </div>
-          <div className="tg-card">
-            <span>Chat ID: <span className="chat-id">{settings.telegramChatId}</span></span>
-            <button className="btn btn-sm btn-ghost" onClick={copyChatId}>
-              {copied ? <><Icon name="Check" size={12} /> Copied</> : <><Icon name="Copy" size={12} /> Copy</>}
+
+          <div style={{ marginBottom: 14 }}>
+            <div className="field">
+              <label>Chat ID</label>
+              <div style={{ display: "flex", gap: 8 }}>
+                <input
+                  className="input"
+                  value={chatIdEdit}
+                  onChange={e => setChatIdEdit(e.target.value)}
+                  placeholder="e.g. 742108391"
+                  style={{ fontFamily: "var(--font-mono)", flex: 1 }}
+                />
+                <button className="btn btn-sm btn-ghost" onClick={copyChatId} title="Copy">
+                  {copied ? <Icon name="Check" size={13} /> : <Icon name="Copy" size={13} />}
+                </button>
+                <button className="btn btn-sm btn-primary" onClick={saveChatId}>Save</button>
+              </div>
+            </div>
+          </div>
+
+          <div style={{ marginBottom: 14 }}>
+            <button
+              className="btn btn-sm btn-ghost"
+              onClick={testReminder}
+              disabled={testStatus === "sending"}
+              style={{ gap: 6 }}
+            >
+              {testStatus === "sending" && <><Icon name="Spinner" size={13} /> Sending…</>}
+              {testStatus === "ok"      && <><Icon name="Check"   size={13} /> Sent!</>}
+              {testStatus === "fail"    && <><Icon name="Alert"   size={13} /> Failed — check token & chat ID</>}
+              {testStatus === "idle"    && <><Icon name="Bell"    size={13} /> Test reminder now</>}
             </button>
           </div>
-          <div style={{ marginTop: 16 }}>
-            <details>
-              <summary style={{ cursor: "default", color: "var(--text-dim)", fontSize: 13, listStyle: "none", display: "flex", alignItems: "center", gap: 6 }}>
-                <Icon name="ChevronRight" size={12} /> How to connect a new chat
-              </summary>
-              <ol style={{ color: "var(--text-dim)", fontSize: 12.5, lineHeight: 1.7, paddingLeft: 18, marginTop: 10 }}>
-                <li>Open Telegram and search for <span className="kbd">@FinOpsBot</span></li>
-                <li>Send the command <span className="kbd">/start</span></li>
-                <li>The bot will reply with a 6-digit code</li>
-                <li>Paste the code in the field below to link your chat</li>
-              </ol>
-              <div style={{ display: "flex", gap: 8, marginTop: 10 }}>
-                <input className="input" placeholder="Enter 6-digit code" style={{ maxWidth: 180 }} />
-                <button className="btn">Verify</button>
-              </div>
-            </details>
-          </div>
+
+          <details>
+            <summary style={{ cursor: "default", color: "var(--text-dim)", fontSize: 13, listStyle: "none", display: "flex", alignItems: "center", gap: 6 }}>
+              <Icon name="ChevronRight" size={12} /> How to set up the bot
+            </summary>
+            <ol style={{ color: "var(--text-dim)", fontSize: 12.5, lineHeight: 1.8, paddingLeft: 18, marginTop: 10 }}>
+              <li>Open Telegram → search <span className="kbd">@BotFather</span> → send <span className="kbd">/newbot</span></li>
+              <li>Follow the prompts and copy your <strong>Bot Token</strong></li>
+              <li>Set <span className="kbd">TELEGRAM_BOT_TOKEN=&lt;token&gt;</span> in your <span className="kbd">.env</span> or docker-compose env</li>
+              <li>Start a chat with your bot, then open <span className="kbd">https://api.telegram.org/bot&lt;token&gt;/getUpdates</span> to find your Chat ID</li>
+              <li>Paste your Chat ID above and click <strong>Save</strong></li>
+              <li>Click <strong>Test reminder now</strong> to verify it works</li>
+            </ol>
+          </details>
         </div>
 
+        {/* Reminder settings */}
         <div className="card">
           <div className="card-head">
             <div>
@@ -140,13 +183,14 @@ export default function SettingsPage({ settings, setSettings }: Props) {
             <div className="settings-row">
               <div className="lbl-stack">
                 <div className="lbl">Daily summary</div>
-                <div className="desc">A 9 AM digest of today&apos;s due payments</div>
+                <div className="desc">A 9 AM digest of today&apos;s due &amp; upcoming payments</div>
               </div>
               <Switch value={settings.dailySummary} onChange={v => set("dailySummary", v)} />
             </div>
           </div>
         </div>
 
+        {/* Change password */}
         <div className="card" style={{ gridColumn: "1 / -1" }}>
           <div className="card-head">
             <div>
