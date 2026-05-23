@@ -16,6 +16,7 @@ export default function SettingsPage({ settings, setSettings }: Props) {
   const [pwErr, setPwErr] = useState("");
   const [pwOk, setPwOk] = useState(false);
   const [testStatus, setTestStatus] = useState<"idle" | "sending" | "ok" | "fail">("idle");
+  const [clearStatus, setClearStatus] = useState<"idle" | "confirm" | "clearing" | "done">("idle");
   const [chatIdEdit, setChatIdEdit] = useState(settings.telegramChatId);
   const curPwRef = useRef<HTMLInputElement>(null);
   const newPwRef = useRef<HTMLInputElement>(null);
