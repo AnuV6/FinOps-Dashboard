@@ -1,7 +1,9 @@
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
-  /* config options here */
+  turbopack: {
+    root: "C:\\Users\\AnupaDinurangaBISTEC\\OneDrive - BISTEC Global\\Desktop\\Personal Projects\\FinOps Dashboard",
+  },
 };
 
 export default nextConfig;
