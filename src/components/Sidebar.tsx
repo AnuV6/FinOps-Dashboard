@@ -32,9 +32,9 @@ export default function Sidebar({ route, setRoute, onLogout }: SidebarProps) {
       ))}
       <div className="nav-spacer" />
       <div className="sidebar-footer">
-        <div className="avatar">YA</div>
+        <div className="avatar">AD</div>
         <div style={{ flex: 1, minWidth: 0 }}>
-          <div style={{ fontSize: 13, fontWeight: 500 }}>Yasiru A.</div>
+          <div style={{ fontSize: 13, fontWeight: 500 }}>Anupa D.</div>
           <div style={{ fontSize: 11, color: "var(--text-faint)" }}>Owner</div>
         </div>
         <button className="btn btn-ghost btn-icon" title="Sign out" onClick={onLogout}>
