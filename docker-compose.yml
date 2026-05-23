@@ -1,0 +1,13 @@
+services:
+  finops:
+    image: ghcr.io/${GITHUB_REPOSITORY:-your-username/finops-dashboard}:latest
+    restart: unless-stopped
+    ports:
+      - "3000:3000"
+    environment:
+      DATABASE_URL: "file:/data/finops.db"
+    volumes:
+      - finops-data:/data
+
+volumes:
+  finops-data:
