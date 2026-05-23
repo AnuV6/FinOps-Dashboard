@@ -4,7 +4,10 @@ FROM node:22-alpine AS base
 FROM base AS deps
 WORKDIR /app
 COPY package.json package-lock.json ./
-RUN npm ci --ignore-scripts
+# NOTE: do NOT use --ignore-scripts here — Prisma needs its postinstall hooks
+# to set up engine binaries. We skip only our own postinstall (prisma generate)
+# by omitting schema at this stage; Prisma's own install hooks are fine.
+RUN npm ci
 
 # ── builder: generate Prisma client + Next.js build ───────────────────────────
 FROM base AS builder
@@ -12,7 +15,7 @@ WORKDIR /app
 COPY --from=deps /app/node_modules ./node_modules
 COPY . .
 ENV NEXT_TELEMETRY_DISABLED=1
-# generate only (no DB needed at build time); migration runs at container start
+# generate Prisma client (no DB needed at build time)
 RUN npx prisma generate
 RUN npm run build
 
@@ -38,8 +41,8 @@ COPY --from=builder --chown=nextjs:nodejs /app/.next/static ./.next/static
 # Prisma schema + migrations + seed (needed at startup)
 COPY --from=builder --chown=nextjs:nodejs /app/prisma ./prisma
 
-# Prisma CLI + engine (needed for migrate deploy at startup)
-COPY --from=builder --chown=nextjs:nodejs /app/node_modules/.bin/prisma ./node_modules/.bin/prisma
+# Full prisma package (node_modules/prisma/build/index.js is called directly
+# in entrypoint.sh so __dirname resolves correctly and finds the WASM engine)
 COPY --from=builder --chown=nextjs:nodejs /app/node_modules/prisma ./node_modules/prisma
 COPY --from=builder --chown=nextjs:nodejs /app/node_modules/@prisma ./node_modules/@prisma
 
