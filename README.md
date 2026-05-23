@@ -1,36 +1,67 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# FinOps Dashboard
+
+A personal finance management dashboard built with Next.js. Track income, expenses, recurring payments, and get Telegram reminders before due dates.
+
+## Features
+
+- **Dashboard** — Monthly income/expenses overview, 6-month bar chart, category donut chart, upcoming payment alerts
+- **Transactions** — Add, edit, delete, search, and filter transactions by type, category, and date range
+- **Recurring Payments** — Track fixed-date and rolling-interval payments with overdue detection and mark-as-paid
+- **Reports** — Monthly breakdown with daily spending chart, category-wise analysis, and PDF export
+- **Categories** — Custom categories with color and icon picker for both income and expense
+- **Settings** — Telegram bot integration, reminder preferences (1-day/2-day before), password management
+- **Telegram Reminders** — Get notified before payments are due
+
+## Tech Stack
+
+| Layer | Technology |
+|---|---|
+| Framework | Next.js 16 (App Router) |
+| Language | TypeScript |
+| Styling | Tailwind CSS + custom CSS variables |
+| Charts | Custom SVG charts |
+| Fonts | Geist Sans & Geist Mono |
+| Containerization | Docker (multi-stage, Alpine) |
+| CI/CD | GitHub Actions → GHCR |
 
 ## Getting Started
 
-First, run the development server:
-
 ```bash
+npm install
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+Open [http://localhost:3000](http://localhost:3000) in your browser.
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+## Docker
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+Build and run locally:
 
-## Learn More
+```bash
+docker build -t finops-dashboard .
+docker run -d -p 3000:3000 finops-dashboard
+```
 
-To learn more about Next.js, take a look at the following resources:
+## Project Structure
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+```
+src/
+  app/
+    globals.css        — Dark theme design system
+    layout.tsx         — Root layout with Geist fonts
+    page.tsx           — Main app with routing and state
+  lib/
+    data.ts            — Types, seed data, helpers
+  components/
+    Icon.tsx           — SVG icon library
+    Sidebar.tsx        — Navigation sidebar
+    Modal.tsx          — Reusable modal dialog
+    Stat.tsx           — Stat card component
+    FormControls.tsx   — Switch, Checkbox, Segmented control
+    charts/            — BarsChart, DonutChart, DailyBars
+    pages/             — All page components
+```
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+## License
 
-## Deploy on Vercel
-
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+Private — personal use only.
