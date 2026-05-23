@@ -14,6 +14,8 @@ RUN npm ci --ignore-scripts
 # ── builder: generate Prisma client + Next.js build ───────────────────────────
 FROM base AS builder
 WORKDIR /app
+# OpenSSL is required by Prisma's schema engine (migrate deploy)
+RUN apk add --no-cache openssl
 COPY --from=deps /app/node_modules ./node_modules
 COPY . .
 ENV NEXT_TELEMETRY_DISABLED=1
@@ -26,6 +28,8 @@ FROM base AS runner
 WORKDIR /app
 ENV NODE_ENV=production
 ENV NEXT_TELEMETRY_DISABLED=1
+# OpenSSL required by Prisma schema engine at runtime (migrate deploy in entrypoint)
+RUN apk add --no-cache openssl
 # DB will be volume-mounted at /data; override DATABASE_URL at runtime via env
 ENV DATABASE_URL="file:/data/finops.db"
 

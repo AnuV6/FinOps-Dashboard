@@ -1,5 +1,8 @@
 generator client {
-  provider = "prisma-client-js"
+  provider      = "prisma-client-js"
+  // linux-musl-openssl-3.0.x = Alpine Linux (musl libc) with OpenSSL 3.x
+  // "native" is used for local development (Windows/macOS)
+  binaryTargets = ["native", "linux-musl-openssl-3.0.x"]
 }
 
 datasource db {
