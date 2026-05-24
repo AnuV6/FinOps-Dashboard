@@ -1,12 +1,14 @@
 #!/bin/sh
 set -e
 
-# Run pending migrations (idempotent, safe on every start)
-# Use full module path so __dirname resolves correctly (not through .bin/ symlink)
-node node_modules/prisma/build/index.js migrate deploy --schema=prisma/schema.prisma
+# Fix /data ownership (volume mounts default to root)
+chown nextjs:nodejs /data
 
-# Seed initial data if the database is empty
-node prisma/seed.js
+# Run migrations as nextjs user
+su-exec nextjs node node_modules/prisma/build/index.js migrate deploy --schema=prisma/schema.prisma
 
-# Start Next.js
-exec node server.js
+# Seed initial data if empty
+su-exec nextjs node prisma/seed.js
+
+# Start Next.js as nextjs user
+exec su-exec nextjs node server.js

@@ -49,9 +49,12 @@ COPY --from=builder --chown=nextjs:nodejs /app/node_modules/@prisma ./node_modul
 COPY --chown=nextjs:nodejs entrypoint.sh ./entrypoint.sh
 RUN chmod +x ./entrypoint.sh
 
-USER nextjs
+# su-exec to drop from root → nextjs after setup
+RUN apk add --no-cache su-exec
+
 EXPOSE 3000
 ENV PORT=3000
 ENV HOSTNAME="0.0.0.0"
 
+# Entrypoint runs as root to fix /data ownership, then drops to nextjs
 CMD ["./entrypoint.sh"]
