@@ -33,6 +33,7 @@ model RecurringPayment {
   name        String
   amount      Float
   category    String
+  type        String  @default("expense") // "expense" | "income"
   schedule    String  // "fixed" | "rolling"
   dayOfMonth  Int?
   intervalDays Int?

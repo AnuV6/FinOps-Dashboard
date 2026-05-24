@@ -39,14 +39,17 @@ export async function POST() {
   const tomorrow = addDays(today, 1);
   const dayAfter = addDays(today, 2);
 
-  const all = await prisma.recurringPayment.findMany();
+  const all = await prisma.recurringPayment.findMany() as Array<{ id: string; name: string; amount: number; category: string; type: string; schedule: string; dayOfMonth: number | null; intervalDays: number | null; nextDue: string; status: string; notes: string }>;
   const sent: string[] = [];
 
   // 1-day reminder
   if (s.remind1d === "true") {
     const due1 = all.filter(r => r.nextDue === tomorrow);
     for (const r of due1) {
-      const msg = `⏰ <b>Payment due tomorrow!</b>\n\n📋 <b>${r.name}</b>\n💰 ${lkr(r.amount)}\n📅 Due: ${fmtDate(r.nextDue)}\n🏷 ${r.category}${r.notes ? `\n📝 ${r.notes}` : ""}`;
+      const isIncome = r.type === "income";
+      const msg = isIncome
+        ? `💰 <b>Collect payment tomorrow!</b>\n\n📋 <b>${r.name}</b>\n💵 ${lkr(r.amount)}\n📅 Due: ${fmtDate(r.nextDue)}\n🏷 ${r.category}${r.notes ? `\n📝 ${r.notes}` : ""}`
+        : `⏰ <b>Payment due tomorrow!</b>\n\n📋 <b>${r.name}</b>\n💸 ${lkr(r.amount)}\n📅 Due: ${fmtDate(r.nextDue)}\n🏷 ${r.category}${r.notes ? `\n📝 ${r.notes}` : ""}`;
       await sendMessage(chatId, msg);
       sent.push(`1d: ${r.name}`);
     }
@@ -56,7 +59,10 @@ export async function POST() {
   if (s.remind2d === "true") {
     const due2 = all.filter(r => r.nextDue === dayAfter);
     for (const r of due2) {
-      const msg = `🔔 <b>Payment due in 2 days</b>\n\n📋 <b>${r.name}</b>\n💰 ${lkr(r.amount)}\n📅 Due: ${fmtDate(r.nextDue)}\n🏷 ${r.category}${r.notes ? `\n📝 ${r.notes}` : ""}`;
+      const isIncome = r.type === "income";
+      const msg = isIncome
+        ? `💰 <b>Collect payment in 2 days</b>\n\n📋 <b>${r.name}</b>\n💵 ${lkr(r.amount)}\n📅 Due: ${fmtDate(r.nextDue)}\n🏷 ${r.category}${r.notes ? `\n📝 ${r.notes}` : ""}`
+        : `🔔 <b>Payment due in 2 days</b>\n\n📋 <b>${r.name}</b>\n💸 ${lkr(r.amount)}\n📅 Due: ${fmtDate(r.nextDue)}\n🏷 ${r.category}${r.notes ? `\n📝 ${r.notes}` : ""}`;
       await sendMessage(chatId, msg);
       sent.push(`2d: ${r.name}`);
     }

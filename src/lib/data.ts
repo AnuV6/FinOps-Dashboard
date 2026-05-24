@@ -22,6 +22,7 @@ export interface RecurringPayment {
   name: string;
   amount: number;
   category: string;
+  type: "expense" | "income";
   schedule: "fixed" | "rolling";
   dayOfMonth: number | null;
   intervalDays: number | null;
@@ -179,13 +180,13 @@ export const SEED_RECURRING: RecurringPayment[] = (() => {
     return isoDate(d);
   };
   return [
-    { id: "r1", name: "DigitalOcean droplet", amount: 3800, category: "Hosting", schedule: "fixed", dayOfMonth: 24, intervalDays: null, nextDue: inDays(1), status: "upcoming", notes: "Auto-charge on Visa" },
-    { id: "r2", name: "Gold Installment", amount: 18500, category: "Gold Payment", schedule: "fixed", dayOfMonth: 25, intervalDays: null, nextDue: inDays(2), status: "upcoming", notes: "" },
-    { id: "r3", name: "Cloudflare Workers Pro", amount: 1500, category: "Hosting", schedule: "rolling", dayOfMonth: null, intervalDays: 30, nextDue: inDays(8), status: "upcoming", notes: "" },
-    { id: "r4", name: "Mobile + ADSL", amount: 4200, category: "Utilities", schedule: "fixed", dayOfMonth: 5, intervalDays: null, nextDue: inDays(12), status: "upcoming", notes: "Dialog combined bill" },
-    { id: "r5", name: "Electricity (CEB)", amount: 8400, category: "Utilities", schedule: "fixed", dayOfMonth: 18, intervalDays: null, nextDue: inDays(-3), status: "overdue", notes: "" },
-    { id: "r6", name: "Credit Card minimum", amount: 12000, category: "Finance", schedule: "fixed", dayOfMonth: 28, intervalDays: null, nextDue: inDays(5), status: "upcoming", notes: "" },
-    { id: "r7", name: "Spotify Family", amount: 1900, category: "Other", schedule: "rolling", dayOfMonth: null, intervalDays: 30, nextDue: inDays(18), status: "upcoming", notes: "" },
+    { id: "r1", name: "DigitalOcean droplet", amount: 3800, category: "Hosting", type: "expense", schedule: "fixed", dayOfMonth: 24, intervalDays: null, nextDue: inDays(1), status: "upcoming", notes: "Auto-charge on Visa" },
+    { id: "r2", name: "Gold Installment", amount: 18500, category: "Gold Payment", type: "expense", schedule: "fixed", dayOfMonth: 25, intervalDays: null, nextDue: inDays(2), status: "upcoming", notes: "" },
+    { id: "r3", name: "Cloudflare Workers Pro", amount: 1500, category: "Hosting", type: "expense", schedule: "rolling", dayOfMonth: null, intervalDays: 30, nextDue: inDays(8), status: "upcoming", notes: "" },
+    { id: "r4", name: "Mobile + ADSL", amount: 4200, category: "Utilities", type: "expense", schedule: "fixed", dayOfMonth: 5, intervalDays: null, nextDue: inDays(12), status: "upcoming", notes: "Dialog combined bill" },
+    { id: "r5", name: "Electricity (CEB)", amount: 8400, category: "Utilities", type: "expense", schedule: "fixed", dayOfMonth: 18, intervalDays: null, nextDue: inDays(-3), status: "overdue", notes: "" },
+    { id: "r6", name: "Credit Card minimum", amount: 12000, category: "Finance", type: "expense", schedule: "fixed", dayOfMonth: 28, intervalDays: null, nextDue: inDays(5), status: "upcoming", notes: "" },
+    { id: "r7", name: "Spotify Family", amount: 1900, category: "Other", type: "expense", schedule: "rolling", dayOfMonth: null, intervalDays: 30, nextDue: inDays(18), status: "upcoming", notes: "" },
   ];
 })();
 

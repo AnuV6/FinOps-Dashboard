@@ -25,6 +25,7 @@ function RecurringModal({ r, mode, categories, onSave, onClose }: {
     name: "",
     amount: "" as unknown as number,
     category: "Utilities",
+    type: "expense",
     schedule: "fixed",
     dayOfMonth: 1,
     intervalDays: 30,
@@ -33,7 +34,7 @@ function RecurringModal({ r, mode, categories, onSave, onClose }: {
     notes: "",
   });
   const set = (k: string, v: unknown) => setForm(f => ({ ...f, [k]: v }));
-  const cats = categories.filter(c => c.type === "expense");
+  const cats = categories.filter(c => c.type === form.type);
 
   const submit = () => {
     if (!form.name || !form.amount) return;
@@ -42,7 +43,7 @@ function RecurringModal({ r, mode, categories, onSave, onClose }: {
 
   return (
     <Modal
-      title={mode === "add" ? "Add Recurring Payment" : "Edit Recurring Payment"}
+      title={mode === "add" ? "Add Recurring" : "Edit Recurring"}
       onClose={onClose}
       footer={
         <>
@@ -54,8 +55,19 @@ function RecurringModal({ r, mode, categories, onSave, onClose }: {
       }
     >
       <div className="field">
+        <label>Type</label>
+        <div className="seg">
+          <button className={form.type === "expense" ? "on" : ""} onClick={() => { set("type", "expense"); set("category", categories.find(c => c.type === "expense")?.name ?? ""); }}>
+            Expense (pay)
+          </button>
+          <button className={form.type === "income" ? "on" : ""} onClick={() => { set("type", "income"); set("category", categories.find(c => c.type === "income")?.name ?? ""); }}>
+            Income (collect)
+          </button>
+        </div>
+      </div>
+      <div className="field">
         <label>Name</label>
-        <input className="input" placeholder="e.g. Internet bill" value={form.name} onChange={e => set("name", e.target.value)} autoFocus />
+        <input className="input" placeholder={form.type === "income" ? "e.g. Client A — Hosting" : "e.g. Internet bill"} value={form.name} onChange={e => set("name", e.target.value)} autoFocus />
       </div>
       <div className="field-row">
         <div className="field">
@@ -73,7 +85,7 @@ function RecurringModal({ r, mode, categories, onSave, onClose }: {
         <label>Schedule</label>
         <div className="seg">
           <button className={form.schedule === "fixed" ? "on" : ""} onClick={() => set("schedule", "fixed")}>Fixed date</button>
-          <button className={form.schedule === "rolling" ? "on" : ""} onClick={() => set("schedule", "rolling")}>Rolling 30 days</button>
+          <button className={form.schedule === "rolling" ? "on" : ""} onClick={() => set("schedule", "rolling")}>Rolling interval</button>
         </div>
       </div>
       <div className="field-row">
@@ -108,10 +120,10 @@ export default function RecurringPage({ recurring, setRecurring, categories, tra
   const today = todayISO();
   const sorted = [...recurring].map(r => ({ ...r, days: daysBetween(today, r.nextDue) })).sort((a, b) => a.days - b.days);
 
-  const markPaid = async (r: RecurringPayment & { days: number }) => {
+  const markDone = async (r: RecurringPayment & { days: number }) => {
     const txBody = {
       date: isoDate(today),
-      type: "expense",
+      type: r.type ?? "expense",
       category: r.category,
       amount: r.amount,
       note: r.name + " (auto)",
@@ -167,77 +179,107 @@ export default function RecurringPage({ recurring, setRecurring, categories, tra
     setModal(null);
   };
 
+  const expenses = sorted.filter(r => (r.type ?? "expense") === "expense");
+  const incomes  = sorted.filter(r => r.type === "income");
+
+  const renderCard = (r: RecurringPayment & { days: number }) => {
+    const cat = categories.find(c => c.name === r.category);
+    const isOverdue = r.days < 0;
+    const isIncome  = r.type === "income";
+    return (
+      <div key={r.id} className={"rec-card " + (isOverdue ? "overdue" : "")}>
+        <div className="rec-head">
+          <div style={{ display: "flex", gap: 12, alignItems: "center" }}>
+            <div style={{
+              width: 38, height: 38, borderRadius: 10,
+              background: (cat ? cat.color : "#475569") + "22",
+              color: cat ? cat.color : "#94a3b8",
+              display: "grid", placeItems: "center",
+            }}>
+              <Icon name={cat ? cat.icon : "Wallet"} size={18} />
+            </div>
+            <div>
+              <div className="rec-name">{r.name}</div>
+              <div className="rec-meta">
+                <span>{r.category}</span>
+                <span>&middot;</span>
+                <span>{r.schedule === "fixed" ? `Day ${r.dayOfMonth}` : `Every ${r.intervalDays}d`}</span>
+              </div>
+            </div>
+          </div>
+          <div className="rec-amount" style={{ color: isIncome ? "var(--emerald-2)" : undefined }}>
+            {isIncome ? "+" : ""}{LKR(r.amount)}
+          </div>
+        </div>
+
+        <div style={{ display: "flex", gap: 8, alignItems: "center", flexWrap: "wrap" }}>
+          {isOverdue ? (
+            <span className="badge danger"><Icon name="Alert" size={11} /> {isIncome ? "Uncollected" : "Overdue"} {Math.abs(r.days)}d</span>
+          ) : r.days <= 1 ? (
+            <span className="badge danger"><span className="dot" />{isIncome ? "Collect" : "Due"} {r.days === 0 ? "today" : "tomorrow"}</span>
+          ) : r.days <= 2 ? (
+            <span className="badge amber"><span className="dot" />{isIncome ? "Collect" : "Due"} in {r.days}d</span>
+          ) : (
+            <span className="badge success"><span className="dot" />Upcoming</span>
+          )}
+          <span className="badge">{r.schedule === "fixed" ? "Fixed date" : `Every ${r.intervalDays}d`}</span>
+        </div>
+
+        <div className="rec-foot">
+          <div className="rec-due">
+            {isIncome ? "Collect by:" : "Next due:"} <strong>{fmtDate(r.nextDue)}</strong>
+          </div>
+          <div style={{ display: "flex", gap: 6 }}>
+            <button className="btn btn-sm btn-ghost" onClick={() => setModal({ mode: "edit", r })} title="Edit"><Icon name="Edit" size={13} /></button>
+            <button className="btn btn-sm btn-ghost" onClick={() => onDelete(r.id)} title="Delete"><Icon name="Trash" size={13} /></button>
+            <button className="btn btn-sm btn-primary" onClick={() => markDone(r)}>
+              <Icon name="Check" size={13} /> {isIncome ? "Mark collected" : "Mark paid"}
+            </button>
+          </div>
+        </div>
+      </div>
+    );
+  };
+
   return (
     <div>
       <div className="page-head">
         <div>
-          <h1 className="page-title">Recurring Payments</h1>
-          <div className="page-sub">{recurring.length} recurring payments &middot; {sorted.filter(r => r.days < 0).length} overdue</div>
+          <h1 className="page-title">Recurring</h1>
+          <div className="page-sub">
+            {expenses.length} payments · {incomes.length} receivables · {sorted.filter(r => r.days < 0).length} overdue
+          </div>
         </div>
         <div className="page-head-actions">
           <button className="btn btn-primary" onClick={() => setModal({ mode: "add" })}>
-            <Icon name="Plus" size={14} /> Add Recurring Payment
+            <Icon name="Plus" size={14} /> Add Recurring
           </button>
         </div>
       </div>
 
-      <div className="rec-grid">
-        {sorted.map(r => {
-          const cat = categories.find(c => c.name === r.category);
-          const isOverdue = r.days < 0;
-          return (
-            <div key={r.id} className={"rec-card " + (isOverdue ? "overdue" : "")}>
-              <div className="rec-head">
-                <div style={{ display: "flex", gap: 12, alignItems: "center" }}>
-                  <div style={{
-                    width: 38, height: 38, borderRadius: 10,
-                    background: (cat ? cat.color : "#475569") + "22",
-                    color: cat ? cat.color : "#94a3b8",
-                    display: "grid", placeItems: "center",
-                  }}>
-                    <Icon name={cat ? cat.icon : "Wallet"} size={18} />
-                  </div>
-                  <div>
-                    <div className="rec-name">{r.name}</div>
-                    <div className="rec-meta">
-                      <span>{r.category}</span>
-                      <span>&middot;</span>
-                      <span>{r.schedule === "fixed" ? `Day ${r.dayOfMonth}` : `Every ${r.intervalDays}d`}</span>
-                    </div>
-                  </div>
-                </div>
-                <div className="rec-amount">{LKR(r.amount)}</div>
-              </div>
+      {incomes.length > 0 && (
+        <>
+          <div style={{ fontSize: 12, fontWeight: 600, color: "var(--text-dim)", textTransform: "uppercase", letterSpacing: "0.08em", marginBottom: 10 }}>
+            To collect
+          </div>
+          <div className="rec-grid" style={{ marginBottom: 24 }}>
+            {incomes.map(renderCard)}
+          </div>
+        </>
+      )}
 
-              <div style={{ display: "flex", gap: 8, alignItems: "center", flexWrap: "wrap" }}>
-                {isOverdue ? (
-                  <span className="badge danger"><Icon name="Alert" size={11} /> Overdue {Math.abs(r.days)}d</span>
-                ) : r.days <= 1 ? (
-                  <span className="badge danger"><span className="dot" />Due {r.days === 0 ? "today" : "tomorrow"}</span>
-                ) : r.days <= 2 ? (
-                  <span className="badge amber"><span className="dot" />Due in {r.days}d</span>
-                ) : (
-                  <span className="badge success"><span className="dot" />Upcoming</span>
-                )}
-                <span className="badge">{r.schedule === "fixed" ? "Fixed date" : "Rolling 30 days"}</span>
-              </div>
-
-              <div className="rec-foot">
-                <div className="rec-due">
-                  Next due: <strong>{fmtDate(r.nextDue)}</strong>
-                </div>
-                <div style={{ display: "flex", gap: 6 }}>
-                  <button className="btn btn-sm btn-ghost" onClick={() => setModal({ mode: "edit", r })} title="Edit"><Icon name="Edit" size={13} /></button>
-                  <button className="btn btn-sm btn-ghost" onClick={() => onDelete(r.id)} title="Delete"><Icon name="Trash" size={13} /></button>
-                  <button className="btn btn-sm btn-primary" onClick={() => markPaid(r)}>
-                    <Icon name="Check" size={13} /> Mark paid
-                  </button>
-                </div>
-              </div>
+      {expenses.length > 0 && (
+        <>
+          {incomes.length > 0 && (
+            <div style={{ fontSize: 12, fontWeight: 600, color: "var(--text-dim)", textTransform: "uppercase", letterSpacing: "0.08em", marginBottom: 10 }}>
+              To pay
             </div>
-          );
-        })}
-      </div>
+          )}
+          <div className="rec-grid">
+            {expenses.map(renderCard)}
+          </div>
+        </>
+      )}
 
       {modal && <RecurringModal r={modal.r} mode={modal.mode} categories={categories} onSave={onSave} onClose={() => setModal(null)} />}
     </div>
