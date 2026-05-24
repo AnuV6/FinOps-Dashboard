@@ -42,15 +42,24 @@ export default function SettingsPage({ settings, setSettings }: Props) {
     await set("telegramChatId", chatIdEdit);
   };
 
+  const [testErr, setTestErr] = useState("");
   const testReminder = async () => {
     setTestStatus("sending");
+    setTestErr("");
     try {
-      const res = await fetch("/api/remind", { method: "POST" });
-      setTestStatus(res.ok ? "ok" : "fail");
+      const res = await fetch("/api/telegram-test", { method: "POST" });
+      const data = await res.json();
+      if (res.ok) {
+        setTestStatus("ok");
+      } else {
+        setTestStatus("fail");
+        setTestErr(data.error || "Unknown error");
+      }
     } catch {
       setTestStatus("fail");
+      setTestErr("Network error");
     }
-    setTimeout(() => setTestStatus("idle"), 4000);
+    setTimeout(() => setTestStatus("idle"), 6000);
   };
 
   const updatePassword = async () => {
@@ -132,7 +141,7 @@ export default function SettingsPage({ settings, setSettings }: Props) {
             >
               {testStatus === "sending" && <><Icon name="Spinner" size={13} /> Sending…</>}
               {testStatus === "ok"      && <><Icon name="Check"   size={13} /> Sent!</>}
-              {testStatus === "fail"    && <><Icon name="Alert"   size={13} /> Failed — check token & chat ID</>}
+              {testStatus === "fail"    && <><Icon name="Alert"   size={13} /> {testErr || "Failed"}</>}
               {testStatus === "idle"    && <><Icon name="Bell"    size={13} /> Test reminder now</>}
             </button>
           </div>
